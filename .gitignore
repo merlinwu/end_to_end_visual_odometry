@@ -1,0 +1,5 @@
+*.h5
+__pycache__/*
+.idea/*
+train_data
+test_data
