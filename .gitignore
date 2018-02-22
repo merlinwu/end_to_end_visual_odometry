@@ -1,5 +1,6 @@
 *.h5
 __pycache__/*
 .idea/*
+/graph_viz/*
 train_data
 test_data
