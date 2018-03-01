@@ -48,54 +48,43 @@ def calc_covar(input):
     return input
 
 
-cnn_outputs = []
-with tf.variable_scope("CNN"):
-    for i in range(0, timesteps):
-        if i > 0: tf.get_variable_scope().reuse_variables()  # reuse the cnn model
+with tf.variable_scope("CNN", reuse=tf.AUTO_REUSE):
+    cnn_outputs = tf.map_fn(cnn_model, input_data, dtype=tf.float32, name="cnn_map")
 
-        cnn_output = cnn_model(input_data[i, :, :, :, :])  # select the right time step
-        # flatten
-        cnn_output = tf.reshape(cnn_output,
-                                [batch_size, cnn_output.shape[1] * cnn_output.shape[2] * cnn_output.shape[3]])
-        cnn_outputs.append(cnn_output)
-
-cnn_outputs = tf.stack(cnn_outputs)  # stack cnn outputs together, shape becomes [timesteps, batches, ...]
+cnn_outputs = tf.reshape(cnn_outputs,
+                         [max_timesteps, batch_size,
+                          cnn_outputs.shape[2] * cnn_outputs.shape[3] * cnn_outputs.shape[4]])
 
 # RNN Block
 with tf.variable_scope("RNN"):
     lstm_cell_1 = tf.contrib.rnn.BasicLSTMCell(num_units=1024)
     lstm_cell_2 = tf.contrib.rnn.BasicLSTMCell(num_units=1024)
     layered_lstm_cell = tf.contrib.rnn.MultiRNNCell([lstm_cell_1, lstm_cell_2], state_is_tuple=True)
-
     rnn_outputs, _ = tf.nn.dynamic_rnn(layered_lstm_cell, cnn_outputs, dtype=tf.float32, time_major=True)
 
-fc_outputs = []
-with tf.variable_scope("Fully-Connected"):
-    for i in range(0, timesteps):
-        if i > 0: tf.get_variable_scope().reuse_variables()
-        fc_input = rnn_outputs[i, :, :]
-        fc_output = fc_model(fc_input)
-        fc_outputs.append(fc_output)
+with tf.variable_scope("Fully-Connected", reuse=tf.AUTO_REUSE):
+    fc_outputs = tf.map_fn(fc_model, rnn_outputs, dtype=tf.float32, name="fc_map")
 
-fc_outputs.stack(fc_outputs)
-
-init_pose = tf.constant([0, 0, 0, 0, 0, 0, 1], dtype=tf.float32, name="initial_pose", shape=[pose_size])
-poses = [init_pose]
-covars = []
 with tf.variable_scope("SE3"):
-    # for pose in fc_outputs:
-    for i in range(0 + 1, timesteps + 1):
-        pose = pose_comp(poses[i - 1][0:6], fc_outputs[i][0:6])
-        covar = calc_covar(fc_outputs[3:6])
-        poses.append(pose)
-        covars.append(covar)
-
+    
+#
+# init_pose = tf.constant([0, 0, 0, 0, 0, 0, 1], dtype=tf.float32, name="initial_pose", shape=[pose_size])
+# poses = [init_pose]
+# covars = []
+# with tf.variable_scope("SE3"):
+#     # for pose in fc_outputs:
+#     for i in range(0 + 1, timesteps + 1):
+#         pose = pose_comp(poses[i - 1][0:6], fc_outputs[i][0:6])
+#         covar = calc_covar(fc_outputs[3:6])
+#         poses.append(pose)
+#         covars.append(covar)
+#
 sess = tf.Session()
 init = tf.global_variables_initializer()
 sess.run(init)
 # =========== Visualization ============
-writer = tf.summary.FileWriter('graph_viz/', sess.graph)
-# writer.add_graph(tf.get_default_graph())
+writer = tf.summary.FileWriter('graph_viz/')
+writer.add_graph(tf.get_default_graph())
 # sess_ret = sess.run(x, {inputs: np.random.random([1, 40, 12, 512])})
 
 sess.close()
