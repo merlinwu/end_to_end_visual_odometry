@@ -9,14 +9,14 @@ import tensorflow as tf
 # sess = tf.Session(config=config)
 
 max_timesteps = 10
-timesteps = 10
 batch_size = 8
 input_width = 40
 input_height = 12
 input_channels = 512
 pose_size = 13
-input_data = tf.placeholder(tf.float32, name="inputs",
-                            shape=[max_timesteps, batch_size, input_width, input_height, input_channels])
+input_data = tf.placeholder(tf.float32, name="input_data",
+                            shape=[batch_size, max_timesteps, input_width, input_height, input_channels])
+input_data_length = tf.placeholder(tf.float32, name="input_data_length", shape=[batch_size])
 
 output_data = tf.placeholder(tf.float32, name="outputs", shape=[max_timesteps, batch_size, pose_size])
 
@@ -47,12 +47,16 @@ def pose_comp(pose_1, pose_2):
 def calc_covar(input):
     return input
 
+def se3_and_covar(rpy_pose_with_covar, quat_pose_with_covar):
+    pass
+
 
 with tf.variable_scope("CNN", reuse=tf.AUTO_REUSE):
+    input_data = tf.unstack(input_data, axis=1)
     cnn_outputs = tf.map_fn(cnn_model, input_data, dtype=tf.float32, name="cnn_map")
 
 cnn_outputs = tf.reshape(cnn_outputs,
-                         [max_timesteps, batch_size,
+                         [batch_size, max_timesteps,
                           cnn_outputs.shape[2] * cnn_outputs.shape[3] * cnn_outputs.shape[4]])
 
 # RNN Block
@@ -60,25 +64,17 @@ with tf.variable_scope("RNN"):
     lstm_cell_1 = tf.contrib.rnn.BasicLSTMCell(num_units=1024)
     lstm_cell_2 = tf.contrib.rnn.BasicLSTMCell(num_units=1024)
     layered_lstm_cell = tf.contrib.rnn.MultiRNNCell([lstm_cell_1, lstm_cell_2], state_is_tuple=True)
-    rnn_outputs, _ = tf.nn.dynamic_rnn(layered_lstm_cell, cnn_outputs, dtype=tf.float32, time_major=True)
+    rnn_outputs, _ = tf.nn.dynamic_rnn(layered_lstm_cell, cnn_outputs, dtype=tf.float32)
 
 with tf.variable_scope("Fully-Connected", reuse=tf.AUTO_REUSE):
+    rnn_outputs = tf.unstack(rnn_outputs, axis=1)
     fc_outputs = tf.map_fn(fc_model, rnn_outputs, dtype=tf.float32, name="fc_map")
 
 with tf.variable_scope("SE3"):
-    
-#
-# init_pose = tf.constant([0, 0, 0, 0, 0, 0, 1], dtype=tf.float32, name="initial_pose", shape=[pose_size])
-# poses = [init_pose]
-# covars = []
-# with tf.variable_scope("SE3"):
-#     # for pose in fc_outputs:
-#     for i in range(0 + 1, timesteps + 1):
-#         pose = pose_comp(poses[i - 1][0:6], fc_outputs[i][0:6])
-#         covar = calc_covar(fc_outputs[3:6])
-#         poses.append(pose)
-#         covars.append(covar)
-#
+    rnn_outputs = tf.unstack(rnn_outputs, axis=0) # unstack the batches for processing along the timesteps
+
+tf.foldr
+
 sess = tf.Session()
 init = tf.global_variables_initializer()
 sess.run(init)
