@@ -73,7 +73,6 @@ with tf.variable_scope("Fully-Connected", reuse=tf.AUTO_REUSE):
 with tf.variable_scope("SE3"):
     rnn_outputs = tf.unstack(rnn_outputs, axis=0) # unstack the batches for processing along the timesteps
 
-tf.foldr
 
 sess = tf.Session()
 init = tf.global_variables_initializer()
