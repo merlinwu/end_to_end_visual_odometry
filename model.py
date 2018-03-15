@@ -56,4 +56,4 @@ def build_model(batch_size, max_timesteps):
         # fc_outputs = tf.unstack(fc_outputs, axis=0)  # unstack the batches for processing along the timesteps
         se3_outputs = tf.map_fn(se3_comp_over_timesteps, fc_outputs, dtype=tf.float32, name="se3_map")
 
-    return se3_outputs, fc_outputs
+    return input_data, se3_outputs, fc_outputs
