@@ -1,6 +1,6 @@
-import os
-import numpy as np
 import tensorflow as tf
+import tools
+import se3
 
 # tf.logging.set_verbosity(1)
 # config = tf.ConfigProto()
@@ -37,18 +37,12 @@ def fc_model(inputs):
     return fc_12
 
 
-# pose 1 in xyz + rpy
-# pose 2 in xyz + quaternion
-# returns quaternion
-def pose_comp(pose_1, pose_2):
-    return tf.concat([pose_1, [0]], 0) + pose_2
-
-
-def calc_covar(input):
-    return input
-
-def se3_and_covar(rpy_pose_with_covar, quat_pose_with_covar):
-    pass
+def se3_comp_over_timesteps(fc_timesteps):
+    initial_pose = [0, 0, 0,
+                    1, 0, 0, 0]  # position + orientation in quat
+    poses = tools.foldl(se3.se3_comp, fc_timesteps[:, 0:7],
+                        initializer=tf.constant(initial_pose, dtype=tf.float32), dtype=tf.float32)
+    return poses
 
 
 with tf.variable_scope("CNN", reuse=tf.AUTO_REUSE):
@@ -71,9 +65,9 @@ with tf.variable_scope("Fully-Connected", reuse=tf.AUTO_REUSE):
     fc_outputs = tf.map_fn(fc_model, rnn_outputs, dtype=tf.float32, name="fc_map")
 
 with tf.variable_scope("SE3"):
-    rnn_outputs = tf.unstack(rnn_outputs, axis=0) # unstack the batches for processing along the timesteps
-
-tf.foldr
+    # at this point the outputs from the fully connected layer are  [x, y, z, yaw, pitch, roll, 6 x covars]
+    # fc_outputs = tf.unstack(fc_outputs, axis=0)  # unstack the batches for processing along the timesteps
+    se3_outputs = tf.map_fn(se3_comp_over_timesteps, fc_outputs, dtype=tf.float32, name="se3_map")
 
 sess = tf.Session()
 init = tf.global_variables_initializer()
