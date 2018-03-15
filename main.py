@@ -1,6 +1,5 @@
 import tensorflow as tf
-import tools
-import se3
+import model
 
 # tf.logging.set_verbosity(1)
 # config = tf.ConfigProto()
@@ -10,6 +9,8 @@ import se3
 
 max_timesteps = 10
 batch_size = 8
+
+poses_quat, poses_ypr_w_covar = model.build_model(batch_size, max_timesteps)
 
 sess = tf.Session()
 init = tf.global_variables_initializer()

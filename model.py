@@ -1,8 +1,10 @@
 import tensorflow as tf
+import se3
+import tools
+
 
 # CNN Block
 def cnn_model(inputs):
-    # conv6 = tf.layers.conv2d(inputs, name="Conv6", filters=1024, kernel_size=(3, 3,), strides=(2, 2), padding="same")
     conv6 = tf.contrib.layers.conv2d(inputs, num_outputs=1024, kernel_size=(3, 3,),
                                      stride=(2, 2), padding="same", scope="conv_6")
     return conv6
@@ -17,9 +19,10 @@ def fc_model(inputs):
 def se3_comp_over_timesteps(fc_timesteps):
     initial_pose = [0, 0, 0,
                     1, 0, 0, 0]  # position + orientation in quat
-    poses = tools.foldl(se3.se3_comp, fc_timesteps[:, 0:7],
+    poses = tools.foldl(se3.se3_comp, fc_timesteps[:, 0:7], name="se3_comp_foldl",
                         initializer=tf.constant(initial_pose, dtype=tf.float32), dtype=tf.float32)
     return poses
+
 
 def build_model(batch_size, max_timesteps):
     input_width = 40
@@ -53,4 +56,4 @@ def build_model(batch_size, max_timesteps):
         # fc_outputs = tf.unstack(fc_outputs, axis=0)  # unstack the batches for processing along the timesteps
         se3_outputs = tf.map_fn(se3_comp_over_timesteps, fc_outputs, dtype=tf.float32, name="se3_map")
 
-    return fc_outputs, se3_outputs
+    return se3_outputs, fc_outputs
