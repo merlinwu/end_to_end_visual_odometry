@@ -5,9 +5,29 @@ import tools
 
 # CNN Block
 def cnn_model(inputs):
-    conv6 = tf.contrib.layers.conv2d(inputs, num_outputs=1024, kernel_size=(3, 3,),
-                                     stride=(2, 2), padding="same", scope="conv_6")
-    return conv6
+    conv_1 = tf.contrib.layers.conv2d(inputs, num_outputs=64, kernel_size=(7, 7,),
+                                      stride=(2, 2), padding="same", scope="conv_1")
+    conv_2 = tf.contrib.layers.conv2d(conv_1, num_outputs=128, kernel_size=(5, 5,),
+                                      stride=(2, 2), padding="same", scope="conv_2")
+
+    conv_3 = tf.contrib.layers.conv2d(conv_2, num_outputs=256, kernel_size=(5, 5,),
+                                      stride=(2, 2), padding="same", scope="conv_3")
+    conv_3_1 = tf.contrib.layers.conv2d(conv_3, num_outputs=256, kernel_size=(3, 3,),
+                                        stride=(1, 1), padding="same", scope="conv_3_1")
+
+    conv_4 = tf.contrib.layers.conv2d(conv_3_1, num_outputs=512, kernel_size=(3, 3,),
+                                      stride=(2, 2), padding="same", scope="conv_4")
+    conv_4_1 = tf.contrib.layers.conv2d(conv_4, num_outputs=512, kernel_size=(3, 3,),
+                                        stride=(1, 1), padding="same", scope="conv_4_1")
+
+    conv_5 = tf.contrib.layers.conv2d(conv_4_1, num_outputs=512, kernel_size=(3, 3,),
+                                      stride=(2, 2), padding="same", scope="conv_5")
+    conv_5_1 = tf.contrib.layers.conv2d(conv_5, num_outputs=512, kernel_size=(3, 3,),
+                                        stride=(1, 1), padding="same", scope="conv_5_1")
+
+    conv_6 = tf.contrib.layers.conv2d(conv_5_1, num_outputs=1024, kernel_size=(3, 3,),
+                                      stride=(2, 2), padding="same", scope="conv_6")
+    return conv_6
 
 
 def fc_model(inputs):
@@ -25,16 +45,16 @@ def se3_comp_over_timesteps(fc_timesteps):
 
 
 def build_model(batch_size, max_timesteps):
-    input_width = 40
-    input_height = 12
-    input_channels = 512
+    input_width = 1280
+    input_height = 384
+    input_channels = 6
 
     input_data = tf.placeholder(tf.float32, name="input_data",
                                 shape=[batch_size, max_timesteps, input_width, input_height, input_channels])
 
     with tf.variable_scope("CNN", reuse=tf.AUTO_REUSE):
-        input_data = tf.unstack(input_data, axis=1)
-        cnn_outputs = tf.map_fn(cnn_model, input_data, dtype=tf.float32, name="cnn_map")
+        input_data_unstacked = tf.unstack(input_data, axis=1)
+        cnn_outputs = tf.map_fn(cnn_model, input_data_unstacked, dtype=tf.float32, name="cnn_map")
 
     cnn_outputs = tf.reshape(cnn_outputs,
                              [batch_size, max_timesteps,

@@ -19,6 +19,6 @@ sess.run(init)
 # =========== Visualization ============
 writer = tf.summary.FileWriter('graph_viz/')
 writer.add_graph(tf.get_default_graph())
-sess_ret = sess.run(poses_quat, {input_data: np.random.random([1, 40, 12, 512])})
+sess_ret = sess.run(poses_quat, {input_data: np.random.random([8, 10, 1280, 384, 6])})
 
 sess.close()
