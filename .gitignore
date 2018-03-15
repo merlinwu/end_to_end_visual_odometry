@@ -4,4 +4,4 @@ __pycache__/*
 /graph_viz/*
 train_data
 test_data
-test.py
+test_ground.py
