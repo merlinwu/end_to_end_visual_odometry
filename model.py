@@ -44,21 +44,21 @@ def se3_comp_over_timesteps(fc_timesteps):
     return poses
 
 
-def build_model(batch_size, max_timesteps):
-    input_width = 1280
-    input_height = 384
-    input_channels = 6
+def se3_losses(outputs, labels):
+    pass
 
-    input_data = tf.placeholder(tf.float32, name="input_data",
-                                shape=[batch_size, max_timesteps, input_width, input_height, input_channels])
 
+def fc_losses(outputs, labels):
+    pass
+
+
+def build_model(inputs):
     with tf.variable_scope("CNN", reuse=tf.AUTO_REUSE):
-        input_data_unstacked = tf.unstack(input_data, axis=1)
-        cnn_outputs = tf.map_fn(cnn_model, input_data_unstacked, dtype=tf.float32, name="cnn_map")
+        inputs_unstacked = tf.unstack(inputs, axis=1)
+        cnn_outputs = tf.map_fn(cnn_model, inputs_unstacked, dtype=tf.float32, name="cnn_map")
 
-    cnn_outputs = tf.reshape(cnn_outputs,
-                             [batch_size, max_timesteps,
-                              cnn_outputs.shape[2] * cnn_outputs.shape[3] * cnn_outputs.shape[4]])
+    cnn_outputs = tf.reshape(cnn_outputs, [cnn_outputs.shape[0], cnn_outputs.shape[1],
+                                           cnn_outputs.shape[2] * cnn_outputs.shape[3] * cnn_outputs.shape[4]])
 
     # RNN Block
     with tf.variable_scope("RNN"):
@@ -73,7 +73,6 @@ def build_model(batch_size, max_timesteps):
 
     with tf.variable_scope("SE3"):
         # at this point the outputs from the fully connected layer are  [x, y, z, yaw, pitch, roll, 6 x covars]
-        # fc_outputs = tf.unstack(fc_outputs, axis=0)  # unstack the batches for processing along the timesteps
         se3_outputs = tf.map_fn(se3_comp_over_timesteps, fc_outputs, dtype=tf.float32, name="se3_map")
 
-    return input_data, se3_outputs, fc_outputs
+    return fc_outputs, se3_outputs
