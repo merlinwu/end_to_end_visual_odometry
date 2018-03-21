@@ -62,8 +62,8 @@ def build_model(inputs, lstm_init_state):
         )
 
         # setup the RNN layers
-        lstm_cell_1 = tf.contrib.rnn.BasicLSTMCell(num_units=1024)
-        lstm_cell_2 = tf.contrib.rnn.BasicLSTMCell(num_units=1024)
+        lstm_cell_1 = tf.contrib.rnn.BasicLSTMCell(num_units=256)
+        lstm_cell_2 = tf.contrib.rnn.BasicLSTMCell(num_units=256)
         layered_lstm_cell = tf.contrib.rnn.MultiRNNCell([lstm_cell_1, lstm_cell_2], state_is_tuple=True)
         lstm_outputs, lstm_states = tf.nn.dynamic_rnn(layered_lstm_cell, cnn_outputs, dtype=tf.float32)
 

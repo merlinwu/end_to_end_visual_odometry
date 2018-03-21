@@ -3,15 +3,15 @@ import model
 import losses
 import numpy as np
 
-tf.logging.set_verbosity(1)
-config = tf.ConfigProto()
-config.gpu_options.allocator_type ='BFC'
-config.gpu_options.per_process_gpu_memory_fraction = 0.90
-sess = tf.Session(config=config)
+# tf.logging.set_verbosity(1)
+# config = tf.ConfigProto()
+# config.gpu_options.allocator_type ='BFC'
+# config.gpu_options.per_process_gpu_memory_fraction = 0.90
+# sess = tf.Session(config=config)
 
 # =================== CONFIGS ========================
 max_timesteps = 8
-batch_size = 1
+batch_size = 4
 
 input_width = 1280
 input_height = 384
@@ -26,7 +26,7 @@ inputs = tf.placeholder(tf.float32, name="inputs",
                         shape=[batch_size, max_timesteps, input_width, input_height, input_channels])
 
 # init LSTM states, 2 layers, 2 (cell + hidden states), batch size, and 1024 state size
-lstm_init_state = tf.placeholder(tf.float32, name="lstm_init_state", shape=[2, 2, batch_size, 1024])
+lstm_init_state = tf.placeholder(tf.float32, name="lstm_init_state", shape=[2, 2, batch_size, 256])
 
 # 7 for translation + quat
 se3_labels = tf.placeholder(tf.float32, name="se3_labels",
@@ -48,8 +48,8 @@ with tf.variable_scope("LOSSES"):
     fc_losses = losses.fc_losses(fc_outputs, fc_labels)
 
 with tf.variable_scope("TRAINER"):
-    se3_trainer = tf.train.GradientDescentOptimizer(learning_rate=se3_lr).minimize(se3_outputs)
-    fc_trainer = tf.train.GradientDescentOptimizer(learning_rate=fc_lr).minimize(fc_outputs)
+    se3_trainer = tf.train.AdamOptimizer(learning_rate=se3_lr).minimize(se3_outputs)
+    fc_trainer = tf.train.AdamOptimizer(learning_rate=fc_lr).minimize(fc_outputs)
 
 # =================== TRAINING ========================
 
@@ -64,11 +64,11 @@ with tf.Session() as sess:
     fc_losses_history = []
 
     for i_epoch in range(num_epochs):
-        data_inputs = np.random.random([1, 8, 1280, 384, 6])
-        data_se3_labels = np.random.random([1, 8, 7])
-        data_fc_labels = np.random.random([1, 8, 6])
+        data_inputs = np.random.random([batch_size, max_timesteps, 1280, 384, 6])
+        data_se3_labels = np.random.random([batch_size, max_timesteps, 7])
+        data_fc_labels = np.random.random([batch_size, max_timesteps, 6])
 
-        curr_lstm_states = np.zeros([2, 2, batch_size, 1024])
+        curr_lstm_states = np.zeros([2, 2, batch_size, 256])
 
         _se3_losses, _se3_trainer, _curr_lstm_states = sess.run(
             [se3_losses, se3_trainer, lstm_states, ],
@@ -96,4 +96,4 @@ with tf.Session() as sess:
         curr_lstm_states = _curr_lstm_states
 
         # print stats
-        print("se_loss: %f, fc_loss: %f" % (se3_losses, fc_losses))
+        print("se_loss: %f, fc_loss: %f" % (_se3_losses, _fc_losses))
