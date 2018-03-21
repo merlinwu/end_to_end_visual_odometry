@@ -16,23 +16,36 @@ def fc_losses(outputs, labels_u):
     inv_Q = tf.div(tf.constant(1, dtype=tf.float32), Q)
 
     # sum of determinants along the time
-    sum_det_Q = tf.reduce_sum(Q, axis=1)
+    sum_det_Q = tf.reduce_sum(det_Q, axis=1)
 
     # sum of diff_u' * inv_Q * diff_u
-    s = tf.reduce_sum(tf.multiply(diff_u, tf.multiply(inv_Q, diff_u)), axis=(1,2,))
+    s = tf.reduce_sum(tf.multiply(diff_u, tf.multiply(inv_Q, diff_u)), axis=(1, 2,))
 
     # add and multiplies of sum by 1 / t
     loss = (s + sum_det_Q) / tf.cast(tf.shape(outputs)[1], tf.float32)
 
+    with tf.Session() as sess:
+        print("diff_u", diff_u.eval())
+        print("L", L.eval())
+        print("Q", Q.eval())
+        print("det_Q", det_Q.eval())
+        print("inv_Q", inv_Q.eval())
+        print("sum_det_Q", sum_det_Q.eval())
+        print("s", s.eval())
+        print("loss", loss.eval())
+        print("t", tf.cast(tf.shape(outputs)[1], tf.float32).eval())
+        print("", tf.reduce_mean(loss).eval())
+
     return tf.reduce_mean(loss)
 
-# outputs = tf.constant([
-#     [[1, 2, 3, 4, 5, 6, 7], [1, 1, 1, 1, 1, 1, 2]],
-#     [[0, 0, 0, 0, 0, 0, 0], [2, 0, 1, 0, 0, 2, 0]]
-# ], dtype=tf.float32)
-#
-# labels = tf.constant([
-#     [[8, 9, 10, 11, 12, 13, 14], [1, 2, 1, 1, 1, 1, 1]],
-#     [[0, 2, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0]]
-# ], dtype=tf.float32)
-# se3_losses(outputs, labels, 0)
+
+outputs = tf.constant([
+    [[7, 8, 9, 10, 11, 12,    1, 2, 3, 4, 5, 6,], [1, 2, 3, 4, 5, 6,  7, 8, 9, 10, 11, 12,]],
+    [[7, 8, 9, 10, 11, 12,    1, 2, 3, 4, 5, 6,], [1, 2, 3, 4, 5, 6,  7, 8, 9, 10, 11, 12,]],
+], dtype=tf.float32)
+
+labels = tf.constant([
+    [[2, 3, 4, 5, 6, 7], [7, 2, 3, 4, 5, 6]],
+    [[2, 3, 4, 5, 6, 7], [7, 2, 3, 4, 5, 6]],
+], dtype=tf.float32)
+fc_losses(outputs, labels)

@@ -44,15 +44,7 @@ def se3_comp_over_timesteps(fc_timesteps):
     return poses
 
 
-def se3_losses(outputs, labels):
-    pass
-
-
-def fc_losses(outputs, labels):
-    pass
-
-
-def build_model(inputs):
+def build_model(inputs, lstm_init_state):
     with tf.variable_scope("CNN", reuse=tf.AUTO_REUSE):
         inputs_unstacked = tf.unstack(inputs, axis=1)
         cnn_outputs = tf.map_fn(cnn_model, inputs_unstacked, dtype=tf.float32, name="cnn_map")
@@ -62,17 +54,25 @@ def build_model(inputs):
 
     # RNN Block
     with tf.variable_scope("RNN"):
+        # setup the initial state for LSTM
+        state_per_layer_list = tf.unstack(lstm_init_state, axis=0)
+        lstm_tuple_state = tuple(
+            [tf.nn.rnn_cell.LSTMStateTuple(state_per_layer_list[idx][0], state_per_layer_list[idx][1])
+             for idx in range(2)]
+        )
+
+        # setup the RNN layers
         lstm_cell_1 = tf.contrib.rnn.BasicLSTMCell(num_units=1024)
         lstm_cell_2 = tf.contrib.rnn.BasicLSTMCell(num_units=1024)
         layered_lstm_cell = tf.contrib.rnn.MultiRNNCell([lstm_cell_1, lstm_cell_2], state_is_tuple=True)
-        rnn_outputs, _ = tf.nn.dynamic_rnn(layered_lstm_cell, cnn_outputs, dtype=tf.float32)
+        lstm_outputs, lstm_states = tf.nn.dynamic_rnn(layered_lstm_cell, cnn_outputs, dtype=tf.float32)
 
     with tf.variable_scope("Fully-Connected", reuse=tf.AUTO_REUSE):
-        rnn_outputs = tf.unstack(rnn_outputs, axis=1)
-        fc_outputs = tf.map_fn(fc_model, rnn_outputs, dtype=tf.float32, name="fc_map")
+        lstm_outputs = tf.unstack(lstm_outputs, axis=1)
+        fc_outputs = tf.map_fn(fc_model, lstm_outputs, dtype=tf.float32, name="fc_map")
 
     with tf.variable_scope("SE3"):
         # at this point the outputs from the fully connected layer are  [x, y, z, yaw, pitch, roll, 6 x covars]
         se3_outputs = tf.map_fn(se3_comp_over_timesteps, fc_outputs, dtype=tf.float32, name="se3_map")
 
-    return fc_outputs, se3_outputs
+    return fc_outputs, se3_outputs, lstm_states
