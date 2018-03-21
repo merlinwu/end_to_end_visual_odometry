@@ -27,7 +27,7 @@ def fc_losses(outputs, labels_u):
     det_Q = tf.reduce_prod(Q, axis=2)
 
     # inverse of a diagonal matrix is elemental inverse
-    inv_Q = tf.div(tf.constant(1, dtype=tf.float32), Q)
+    inv_Q = tf.div(tf.constant(1, dtype=tf.float32), Q + 1e-8)
 
     # sum of determinants along the time
     sum_det_Q = tf.reduce_sum(det_Q, axis=1)
