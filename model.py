@@ -44,18 +44,6 @@ def se3_comp_over_timesteps(fc_timesteps):
     return poses
 
 
-def cudnn_unroll_rnn(lstm_layer, inputs, initial_state):
-
-    with tf.variable_scope("RNN_UNROLL") as scope:
-        for t, input_t in enumerate(inputs):
-            if t > 0: scope.reuse_variables()
-
-
-
-
-    pass
-
-
 def cudnn_lstm_unrolled(inputs, initial_state):
     lstm_layer = tf.contrib.cudnn_rnn.CudnnLSTM(2, 1024)
 
