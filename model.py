@@ -44,6 +44,22 @@ def se3_comp_over_timesteps(fc_timesteps):
     return poses
 
 
+def cudnn_unroll_rnn(lstm_layer, inputs, initial_state):
+
+    with tf.variable_scope("RNN_UNROLL") as scope:
+        for t, input_t in enumerate(inputs):
+            if t > 0: scope.reuse_variables()
+
+
+
+
+    pass
+
+
+def cudnn_lstm_unrolled(inputs, initial_state):
+    lstm_layer = tf.contrib.cudnn_rnn.CudnnLSTM(2, 1024)
+
+
 def build_model(inputs, lstm_init_state):
     with tf.variable_scope("CNN", reuse=tf.AUTO_REUSE):
         inputs_unstacked = tf.unstack(inputs, axis=1)
@@ -65,7 +81,8 @@ def build_model(inputs, lstm_init_state):
         lstm_cell_1 = tf.contrib.rnn.BasicLSTMCell(num_units=256)
         lstm_cell_2 = tf.contrib.rnn.BasicLSTMCell(num_units=256)
         layered_lstm_cell = tf.contrib.rnn.MultiRNNCell([lstm_cell_1, lstm_cell_2], state_is_tuple=True)
-        lstm_outputs, lstm_states = tf.nn.dynamic_rnn(layered_lstm_cell, cnn_outputs, dtype=tf.float32)
+        lstm_outputs, lstm_states = tf.nn.dynamic_rnn(layered_lstm_cell, cnn_outputs, dtype=tf.float32,
+                                                      initial_state=lstm_tuple_state)
 
     with tf.variable_scope("Fully-Connected", reuse=tf.AUTO_REUSE):
         lstm_outputs = tf.unstack(lstm_outputs, axis=1)

@@ -17,7 +17,7 @@ input_width = 1280
 input_height = 384
 input_channels = 6
 
-num_epochs = 5
+num_epochs = 50
 
 k = 10
 
