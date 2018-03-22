@@ -76,3 +76,12 @@ def foldl(fn, elems, dtype=None, initializer=None, parallel_iterations=10, back_
         r_a.set_shape(elems.get_shape())
         return r_a
 
+def static_map_fn(fn, inputs, axis):
+    unstacked_inputs = inputs.unstack(axis=axis)
+
+    outputs = []
+
+    for val in unstacked_inputs:
+        outputs.append(fn(val))
+
+    return tf.stack(outputs, axis=axis)
