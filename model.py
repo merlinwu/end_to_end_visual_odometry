@@ -3,6 +3,7 @@ import se3
 import tools
 import config as cfg
 
+
 # CNN Block
 def cnn_model(inputs):
     conv_1 = tf.contrib.layers.conv2d(inputs, num_outputs=64, kernel_size=(7, 7,),
@@ -37,11 +38,16 @@ def fc_model(inputs):
 
 
 def se3_comp_over_timesteps(fc_timesteps):
-    initial_pose = [0, 0, 0,
-                    1, 0, 0, 0]  # position + orientation in quat
-    poses = tools.foldl(se3.se3_comp, fc_timesteps[:, 0:7], name="se3_comp_foldl",
-                        initializer=tf.constant(initial_pose, dtype=tf.float32), dtype=tf.float32)
-    return poses
+    # position + orientation in quat
+    initial_pose = tf.constant([0, 0, 0, 1, 0, 0, 0], tf.float32)
+
+    poses = []
+    pose = initial_pose
+    fc_timesteps = tf.unstack(fc_timesteps[:, 0:7], axis=1)  # take the x, y, z, y, p, r
+    for d_pose in fc_timesteps:
+        pose = se3.se3_comp(pose, d_pose)
+        poses.append(pose)
+    return tf.stack(poses)
 
 
 def cudnn_lstm_unrolled(inputs, initial_state):
@@ -49,25 +55,24 @@ def cudnn_lstm_unrolled(inputs, initial_state):
     outputs, final_state = lstm(inputs, initial_state=initial_state)
     return outputs, final_state
 
+
 def build_model(inputs, lstm_init_state):
     with tf.variable_scope("CNN", reuse=tf.AUTO_REUSE):
-        inputs_unstacked = tf.unstack(inputs, axis=1)
-        cnn_outputs = tf.map_fn(cnn_model, inputs_unstacked, dtype=tf.float32, name="cnn_map")
+        cnn_outputs = tools.static_map_fn(cnn_model, inputs, axis=0)
 
     cnn_outputs = tf.reshape(cnn_outputs, [cnn_outputs.shape[0], cnn_outputs.shape[1],
                                            cnn_outputs.shape[2] * cnn_outputs.shape[3] * cnn_outputs.shape[4]])
 
     # RNN Block
-    with tf.variable_scope("RNN"):
+    with tf.variable_scope("RNN", reuse=tf.AUTO_REUSE):
         lstm_init_state = tuple(tf.unstack(lstm_init_state))
         lstm_outputs, lstm_states = cudnn_lstm_unrolled(cnn_outputs, lstm_init_state)
 
     with tf.variable_scope("Fully-Connected", reuse=tf.AUTO_REUSE):
-        lstm_outputs = tf.unstack(lstm_outputs, axis=1)
-        fc_outputs = tf.map_fn(fc_model, lstm_outputs, dtype=tf.float32, name="fc_map")
+        fc_outputs = tools.static_map_fn(fc_model, lstm_outputs, axis=0)
 
-    with tf.variable_scope("SE3"):
+    with tf.variable_scope("SE3", reuse=tf.AUTO_REUSE):
         # at this point the outputs from the fully connected layer are  [x, y, z, yaw, pitch, roll, 6 x covars]
-        se3_outputs = tf.map_fn(se3_comp_over_timesteps, fc_outputs, dtype=tf.float32, name="se3_map")
+        se3_outputs = tools.static_map_fn(se3_comp_over_timesteps, fc_outputs, axis=1)
 
     return fc_outputs, se3_outputs, lstm_states

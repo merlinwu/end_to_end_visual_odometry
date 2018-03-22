@@ -11,19 +11,18 @@ from config import *
 # sess = tf.Session(config=config)
 
 # =================== INPUTS ========================
+# All time major
 inputs = tf.placeholder(tf.float32, name="inputs",
-                        shape=[batch_size, max_timesteps, input_width, input_height, input_channels])
+                        shape=[timesteps, batch_size, input_width, input_height, input_channels])
 
 # init LSTM states, 2 layers, 2 (cell + hidden states), batch size, and 1024 state size
 lstm_init_state = tf.placeholder(tf.float32, name="lstm_init_state", shape=[2, 2, batch_size, lstm_size])
 
 # 7 for translation + quat
-se3_labels = tf.placeholder(tf.float32, name="se3_labels",
-                            shape=[batch_size, max_timesteps, 7])
+se3_labels = tf.placeholder(tf.float32, name="se3_labels", shape=[timesteps, batch_size, 7])
 
 # 6 for translation + rpy, labels not needed for covars
-fc_labels = tf.placeholder(tf.float32, name="se3_labels",
-                           shape=[batch_size, max_timesteps, 6])
+fc_labels = tf.placeholder(tf.float32, name="se3_labels", shape=[timesteps, batch_size, 6])
 
 # dynamic learning rates
 se3_lr = tf.placeholder(tf.float32, name="se3_lr", shape=[])
@@ -53,9 +52,9 @@ with tf.Session() as sess:
     fc_losses_history = []
 
     for i_epoch in range(num_epochs):
-        data_inputs = np.random.random([batch_size, max_timesteps, 1280, 384, 6])
-        data_se3_labels = np.random.random([batch_size, max_timesteps, 7])
-        data_fc_labels = np.random.random([batch_size, max_timesteps, 6])
+        data_inputs = np.random.random([timesteps, batch_size, 1280, 384, 6])
+        data_se3_labels = np.random.random([timesteps, batch_size, 7])
+        data_fc_labels = np.random.random([timesteps, batch_size, 6])
 
         curr_lstm_states = np.zeros([2, 2, batch_size, lstm_size])
 

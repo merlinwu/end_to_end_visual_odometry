@@ -1,4 +1,4 @@
-max_timesteps = 8
+timesteps = 8
 batch_size = 4
 
 input_width = 1280

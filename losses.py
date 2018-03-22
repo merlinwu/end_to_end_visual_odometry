@@ -1,20 +1,22 @@
 import tensorflow as tf
 
-
+# assumes time major
 def se3_losses(outputs, labels, k):
     diff_p = outputs[:, :, 0:3] - labels[:, :, 0:3]
     diff_q = outputs[:, :, 3:] - labels[:, :, 3:]
 
     # takes the the dot product and sum it up along time
-    sum_diff_p_dot_p = tf.reduce_sum(tf.multiply(diff_p, diff_p), axis=(1, 2,))
-    sum_diff_q_dot_q = tf.reduce_sum(tf.multiply(diff_q, diff_q), axis=(1, 2,))
+    sum_diff_p_dot_p = tf.reduce_sum(tf.multiply(diff_p, diff_p), axis=(0, 2,))
+    sum_diff_q_dot_q = tf.reduce_sum(tf.multiply(diff_q, diff_q), axis=(0, 2,))
+
+    t = tf.cast(tf.shape(outputs)[0], tf.float32)
 
     # multiplies the sum by 1 / t
-    loss = (sum_diff_p_dot_p + k * sum_diff_q_dot_q) / tf.cast(tf.shape(outputs)[1], tf.float32)
+    loss = (sum_diff_p_dot_p + k * sum_diff_q_dot_q) / t
 
     return tf.reduce_mean(loss)
 
-
+# assumes time major
 def fc_losses(outputs, labels_u):
     diff_u = outputs[:, :, 0:6] - labels_u
     L = outputs[:, :, 6:12]
@@ -30,12 +32,14 @@ def fc_losses(outputs, labels_u):
     inv_Q = tf.div(tf.constant(1, dtype=tf.float32), Q + 1e-8)
 
     # sum of determinants along the time
-    sum_det_Q = tf.reduce_sum(det_Q, axis=1)
+    sum_det_Q = tf.reduce_sum(det_Q, axis=0)
 
     # sum of diff_u' * inv_Q * diff_u
-    s = tf.reduce_sum(tf.multiply(diff_u, tf.multiply(inv_Q, diff_u)), axis=(1, 2,))
+    s = tf.reduce_sum(tf.multiply(diff_u, tf.multiply(inv_Q, diff_u)), axis=(0, 2,))
+
+    t = tf.cast(tf.shape(outputs)[0], tf.float32)
 
     # add and multiplies of sum by 1 / t
-    loss = (s + sum_det_Q) / tf.cast(tf.shape(outputs)[1], tf.float32)
+    loss = (s + sum_det_Q) / t
 
     return tf.reduce_mean(loss)
