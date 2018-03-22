@@ -2,6 +2,7 @@ import tensorflow as tf
 import model
 import losses
 import numpy as np
+from config import *
 
 # tf.logging.set_verbosity(1)
 # config = tf.ConfigProto()
@@ -9,24 +10,12 @@ import numpy as np
 # config.gpu_options.per_process_gpu_memory_fraction = 0.90
 # sess = tf.Session(config=config)
 
-# =================== CONFIGS ========================
-max_timesteps = 8
-batch_size = 4
-
-input_width = 1280
-input_height = 384
-input_channels = 6
-
-num_epochs = 50
-
-k = 10
-
 # =================== INPUTS ========================
 inputs = tf.placeholder(tf.float32, name="inputs",
                         shape=[batch_size, max_timesteps, input_width, input_height, input_channels])
 
 # init LSTM states, 2 layers, 2 (cell + hidden states), batch size, and 1024 state size
-lstm_init_state = tf.placeholder(tf.float32, name="lstm_init_state", shape=[2, 2, batch_size, 256])
+lstm_init_state = tf.placeholder(tf.float32, name="lstm_init_state", shape=[2, 2, batch_size, lstm_size])
 
 # 7 for translation + quat
 se3_labels = tf.placeholder(tf.float32, name="se3_labels",
@@ -68,7 +57,7 @@ with tf.Session() as sess:
         data_se3_labels = np.random.random([batch_size, max_timesteps, 7])
         data_fc_labels = np.random.random([batch_size, max_timesteps, 6])
 
-        curr_lstm_states = np.zeros([2, 2, batch_size, 256])
+        curr_lstm_states = np.zeros([2, 2, batch_size, lstm_size])
 
         _se3_losses, _se3_trainer, _curr_lstm_states = sess.run(
             [se3_losses, se3_trainer, lstm_states, ],

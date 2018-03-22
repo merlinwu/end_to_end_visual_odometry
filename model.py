@@ -1,7 +1,7 @@
 import tensorflow as tf
 import se3
 import tools
-
+import config as cfg
 
 # CNN Block
 def cnn_model(inputs):
@@ -45,7 +45,7 @@ def se3_comp_over_timesteps(fc_timesteps):
 
 
 def cudnn_lstm_unrolled(inputs, initial_state):
-    lstm = tf.contrib.cudnn_rnn.CudnnLSTM(2, 1024)
+    lstm = tf.contrib.cudnn_rnn.CudnnLSTM(2, cfg.lstm_size)
     outputs, final_state = lstm(inputs, initial_state=initial_state)
     return outputs, final_state
 
@@ -59,6 +59,7 @@ def build_model(inputs, lstm_init_state):
 
     # RNN Block
     with tf.variable_scope("RNN"):
+        lstm_init_state = tuple(tf.unstack(lstm_init_state))
         lstm_outputs, lstm_states = cudnn_lstm_unrolled(cnn_outputs, lstm_init_state)
 
     with tf.variable_scope("Fully-Connected", reuse=tf.AUTO_REUSE):
