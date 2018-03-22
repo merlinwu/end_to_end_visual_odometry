@@ -31,11 +31,11 @@ fc_lr = tf.placeholder(tf.float32, name="fc_lr", shape=[])
 # =================== MODEL + LOSSES + Optimizer ========================
 fc_outputs, se3_outputs, lstm_states = model.build_model(inputs, lstm_init_state)
 
-with tf.variable_scope("LOSSES"):
+with tf.variable_scope("Losses"):
     se3_losses = losses.se3_losses(se3_outputs, se3_labels, k)
     fc_losses = losses.fc_losses(fc_outputs, fc_labels)
 
-with tf.variable_scope("TRAINER"):
+with tf.variable_scope("Optimizer"):
     se3_trainer = tf.train.AdamOptimizer(learning_rate=se3_lr).minimize(se3_outputs)
     fc_trainer = tf.train.AdamOptimizer(learning_rate=fc_lr).minimize(fc_outputs)
 
@@ -47,41 +47,41 @@ with tf.Session() as sess:
     # Visualization
     writer = tf.summary.FileWriter('graph_viz/')
     writer.add_graph(tf.get_default_graph())
-
-    se3_losses_history = []
-    fc_losses_history = []
-
-    for i_epoch in range(num_epochs):
-        data_inputs = np.random.random([timesteps, batch_size, 1280, 384, 6])
-        data_se3_labels = np.random.random([timesteps, batch_size, 7])
-        data_fc_labels = np.random.random([timesteps, batch_size, 6])
-
-        curr_lstm_states = np.zeros([2, 2, batch_size, lstm_size])
-
-        _se3_losses, _se3_trainer, _curr_lstm_states = sess.run(
-            [se3_losses, se3_trainer, lstm_states, ],
-            feed_dict={
-                inputs: data_inputs,
-                se3_labels: data_se3_labels,
-                lstm_init_state: curr_lstm_states,
-                se3_lr: 0.001,
-            }
-        )
-        se3_losses_history.append(_se3_losses)
-        curr_lstm_states = _curr_lstm_states
-
-        _fc_losses, _fc_trainer, _curr_lstm_states = sess.run(
-            [fc_losses, fc_trainer, lstm_states, ],
-            feed_dict={
-                inputs: data_inputs,
-                fc_labels: data_fc_labels,
-                lstm_init_state: curr_lstm_states,
-                fc_lr: 0.001,
-            }
-        )
-        fc_losses_history.append(_fc_losses)
-
-        curr_lstm_states = _curr_lstm_states
-
-        # print stats
-        print("se_loss: %f, fc_loss: %f" % (_se3_losses, _fc_losses))
+#
+#     se3_losses_history = []
+#     fc_losses_history = []
+#
+#     for i_epoch in range(num_epochs):
+#         data_inputs = np.random.random([timesteps, batch_size, 1280, 384, 6])
+#         data_se3_labels = np.random.random([timesteps, batch_size, 7])
+#         data_fc_labels = np.random.random([timesteps, batch_size, 6])
+#
+#         curr_lstm_states = np.zeros([2, 2, batch_size, lstm_size])
+#
+#         _se3_losses, _se3_trainer, _curr_lstm_states = sess.run(
+#             [se3_losses, se3_trainer, lstm_states, ],
+#             feed_dict={
+#                 inputs: data_inputs,
+#                 se3_labels: data_se3_labels,
+#                 lstm_init_state: curr_lstm_states,
+#                 se3_lr: 0.001,
+#             }
+#         )
+#         se3_losses_history.append(_se3_losses)
+#         curr_lstm_states = _curr_lstm_states
+#
+#         _fc_losses, _fc_trainer, _curr_lstm_states = sess.run(
+#             [fc_losses, fc_trainer, lstm_states, ],
+#             feed_dict={
+#                 inputs: data_inputs,
+#                 fc_labels: data_fc_labels,
+#                 lstm_init_state: curr_lstm_states,
+#                 fc_lr: 0.001,
+#             }
+#         )
+#         fc_losses_history.append(_fc_losses)
+#
+#         curr_lstm_states = _curr_lstm_states
+#
+#         # print stats
+#         print("se_loss: %f, fc_loss: %f" % (_se3_losses, _fc_losses))
