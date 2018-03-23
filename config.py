@@ -1,5 +1,5 @@
 timesteps = 8
-batch_size = 8
+batch_size = 7
 
 input_width = 1280
 input_height = 384
