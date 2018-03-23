@@ -9,7 +9,6 @@ from tensorflow.python.framework import tensor_shape
 import tensorflow as tf
 
 
-
 # TODO(yuanbyu, mrry): Handle stride to support sliding windows.
 def foldl(fn, elems, dtype=None, initializer=None, parallel_iterations=10, back_prop=True,
           swap_memory=False, name=None):
@@ -76,3 +75,14 @@ def foldl(fn, elems, dtype=None, initializer=None, parallel_iterations=10, back_
         r_a.set_shape(elems.get_shape())
         return r_a
 
+
+def static_map_fn(fn, inputs, axis):
+    with tf.variable_scope("static_map_fn"):
+        unstacked_inputs = tf.unstack(inputs, axis=axis)
+
+        outputs = []
+
+        for val in unstacked_inputs:
+            outputs.append(fn(val))
+
+        return tf.stack(outputs, axis=axis)
