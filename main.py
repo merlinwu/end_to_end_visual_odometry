@@ -7,7 +7,7 @@ from config import *
 # =================== INPUTS ========================
 # All time major
 inputs = tf.placeholder(tf.float32, name="inputs",
-                        shape=[timesteps, batch_size, input_width, input_height, input_channels])
+                        shape=[timesteps + 1, batch_size, image_channels, input_width, input_height])
 
 # init LSTM states, 2 layers, 2 (cell + hidden states), batch size, and 1024 state size
 lstm_init_state = tf.placeholder(tf.float32, name="lstm_init_state", shape=[2, 2, batch_size, lstm_size])
@@ -47,7 +47,7 @@ with tf.Session() as sess:
     se3_losses_history = []
     fc_losses_history = []
 
-    data_inputs = np.random.random([timesteps, batch_size, 1280, 384, 6])
+    data_inputs = np.random.random([timesteps + 1, batch_size, image_channels, 1280, 384])
     data_se3_labels = np.random.random([timesteps, batch_size, 7])
     data_fc_labels = np.random.random([timesteps, batch_size, 6])
 

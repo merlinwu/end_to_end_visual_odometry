@@ -8,27 +8,27 @@ import config as cfg
 def cnn_model(inputs):
     with tf.variable_scope("cnn_model"):
         conv_1 = tf.contrib.layers.conv2d(inputs, num_outputs=64, kernel_size=(7, 7,),
-                                          stride=(2, 2), padding="same", scope="conv_1")
+                                          stride=(2, 2), padding="same", scope="conv_1", data_format="NCHW")
         conv_2 = tf.contrib.layers.conv2d(conv_1, num_outputs=128, kernel_size=(5, 5,),
-                                          stride=(2, 2), padding="same", scope="conv_2")
+                                          stride=(2, 2), padding="same", scope="conv_2", data_format="NCHW")
 
         conv_3 = tf.contrib.layers.conv2d(conv_2, num_outputs=256, kernel_size=(5, 5,),
-                                          stride=(2, 2), padding="same", scope="conv_3")
+                                          stride=(2, 2), padding="same", scope="conv_3", data_format="NCHW")
         conv_3_1 = tf.contrib.layers.conv2d(conv_3, num_outputs=256, kernel_size=(3, 3,),
-                                            stride=(1, 1), padding="same", scope="conv_3_1")
+                                            stride=(1, 1), padding="same", scope="conv_3_1", data_format="NCHW")
 
         conv_4 = tf.contrib.layers.conv2d(conv_3_1, num_outputs=512, kernel_size=(3, 3,),
-                                          stride=(2, 2), padding="same", scope="conv_4")
+                                          stride=(2, 2), padding="same", scope="conv_4", data_format="NCHW")
         conv_4_1 = tf.contrib.layers.conv2d(conv_4, num_outputs=512, kernel_size=(3, 3,),
-                                            stride=(1, 1), padding="same", scope="conv_4_1")
+                                            stride=(1, 1), padding="same", scope="conv_4_1", data_format="NCHW")
 
         conv_5 = tf.contrib.layers.conv2d(conv_4_1, num_outputs=512, kernel_size=(3, 3,),
-                                          stride=(2, 2), padding="same", scope="conv_5")
+                                          stride=(2, 2), padding="same", scope="conv_5", data_format="NCHW")
         conv_5_1 = tf.contrib.layers.conv2d(conv_5, num_outputs=512, kernel_size=(3, 3,),
-                                            stride=(1, 1), padding="same", scope="conv_5_1")
+                                            stride=(1, 1), padding="same", scope="conv_5_1", data_format="NCHW")
 
         conv_6 = tf.contrib.layers.conv2d(conv_5_1, num_outputs=1024, kernel_size=(3, 3,),
-                                          stride=(2, 2), padding="same", scope="conv_6")
+                                          stride=(2, 2), padding="same", scope="conv_6", data_format="NCHW")
         return conv_6
 
 
@@ -59,10 +59,24 @@ def cudnn_lstm_unrolled(inputs, initial_state):
     return outputs, final_state
 
 
+def cnn_over_timesteps(inputs):
+    with tf.variable_scope("cnn_over_timesteps"):
+        unstacked_inputs = tf.unstack(inputs, axis=0)
+
+        outputs = []
+
+        for i in range(len(unstacked_inputs) - 1):
+            # stack images along channels
+            image_stacked = tf.concat((unstacked_inputs[i], unstacked_inputs[i + 1]), axis=1)
+            outputs.append(cnn_model(image_stacked))
+
+        return tf.stack(outputs, axis=0)
+
+
 def build_model(inputs, lstm_init_state):
     with tf.device("/gpu:0"):
         with tf.variable_scope("cnn_unrolled", reuse=tf.AUTO_REUSE):
-            cnn_outputs = tools.static_map_fn(cnn_model, inputs, axis=0)
+            cnn_outputs = cnn_over_timesteps(inputs)
 
         cnn_outputs = tf.reshape(cnn_outputs, [cnn_outputs.shape[0], cnn_outputs.shape[1],
                                                cnn_outputs.shape[2] * cnn_outputs.shape[3] * cnn_outputs.shape[4]])
