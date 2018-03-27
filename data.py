@@ -2,7 +2,7 @@ import pykitti
 import numpy as np
 import config
 import gc
-import sys
+import transformations
 
 
 class StatefulDataGen(object):
@@ -12,6 +12,7 @@ class StatefulDataGen(object):
     # of timesteps x batch size8
     def __init__(self, base_dir, sequences):
         self.truncated_seq_sizes = []
+        self.end_of_sequence_indices = []
 
         total_num_examples = 0
 
@@ -43,7 +44,7 @@ class StatefulDataGen(object):
         self.input_frames = np.zeros(
             [frames_per_batch, config.batch_size, config.input_channels, config.input_height, config.input_width],
             dtype=np.uint8)
-        self.poses = np.zeros([frames_per_batch, config.batch_size, 4, 4], dtype=np.float32)
+        poses = np.zeros([frames_per_batch, config.batch_size, 4, 4], dtype=np.float32)
 
         num_image_loaded = 0
         for i_seq, seq in enumerate(sequences):
@@ -67,16 +68,20 @@ class StatefulDataGen(object):
                 pose = seq_data.poses[i_img]
 
                 self.input_frames[i, j] = img
-                self.poses[i, j] = pose
+                poses[i, j] = pose
                 num_image_loaded += 1
 
                 print(i_img)
 
+                # if at end of a sequence
                 if i_img != 0 and i_img != length - 1 and i_img % config.timesteps == 0:
                     i = num_image_loaded % frames_per_batch
                     j = num_image_loaded // frames_per_batch
                     self.input_frames[i, j] = img
-                    self.poses[i, j] = pose
+                    poses[i, j] = pose
+
+                    # save this index, so we know where the next sequence begins
+                    self.end_of_sequence_indices.append((i, j,))
 
                     num_image_loaded += 1
 
@@ -84,8 +89,31 @@ class StatefulDataGen(object):
 
                 gc.collect()  # force garbage collection
 
-            # make sure everything is fully loaded
+        # make sure everything is fully loaded
         assert (num_image_loaded == frames_per_batch * config.batch_size)
+
+        # now convert all the ground truth from 4x4 to xyz + quat
+        self.se3_ground_truth = np.zeros([frames_per_batch, config.batch_size, 7], dtype=np.float32)
+        for i in range(0, self.se3_ground_truth.shape[0]):
+            for j in range(0, self.se3_ground_truth.shape[1]):
+                translation = transformations.translation_from_matrix(poses[i, j])
+                quat = transformations.quaternion_from_matrix(poses[i, j])
+                self.se3_ground_truth[i, j] = np.concatenate([translation, quat])
+
+        # extract the relative motion between frames
+        self.fc_ground_truth = np.zeros([frames_per_batch, config.batch_size, 6], dtype=np.float32)
+        # going through rows, then columns
+        for i in range(0, self.fc_ground_truth.shape[0]):
+            for j in range(0, self.fc_ground_truth.shape[1]):
+
+                # always identity at the beginning of the sequence
+                if i % (config.timesteps + 1) == 0:
+                    m = transformations.identity_matrix()
+                else:
+                    m = np.linalg.inv(poses[i - 1, j]) * poses[i, j] # double check
+                translation = transformations.translation_from_matrix(m)
+                ypr = transformations.euler_from_matrix(m)
+                self.fc_ground_truth[i, j] = np.concatenate([translation, ypr]) #double check
 
     def next_batch(self):
         pass
