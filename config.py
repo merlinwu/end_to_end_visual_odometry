@@ -1,7 +1,7 @@
 # timesteps = 8
 # batch_size = 7
 
-timesteps = 8
+timesteps = 3
 batch_size = 2
 
 input_width = 1280
